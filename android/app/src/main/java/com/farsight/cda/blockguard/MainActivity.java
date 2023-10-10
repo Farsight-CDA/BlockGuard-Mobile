@@ -7,7 +7,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        registerPlugin(com.example.myapp.EchoPlugin.class);
+        registerPlugin(com.farsight.cda.blockguard.EchoPlugin.class);
+        registerPlugin(com.farsight.cda.blockguard.VpnPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

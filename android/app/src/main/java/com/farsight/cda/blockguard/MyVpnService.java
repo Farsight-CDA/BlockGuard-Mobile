@@ -8,36 +8,42 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 
 public class MyVpnService extends VpnService {
+    private DatagramSocket tunnelSocket;
     private ParcelFileDescriptor vpnInterface;
 
+    //ToDo: Make sure everything is try-caught to avoid side effects
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // 1
+        // Step 1: Call VpnService.prepare() to ask for permission (when needed).
         Context context = getApplicationContext();
         if (prepare(context) != null) {
-            return START_STICKY;
+            //Caller should make sure that it is prepared
+            stopService(intent);
+            return START_NOT_STICKY;
         }
 
-        // 2
-        DatagramSocket tunnelSocket = null;
-        try {
-            tunnelSocket = new DatagramSocket();
-        } catch (SocketException e) {
-            throw new RuntimeException(e);
-        }
+        // Step 2: Call VpnService.protect() to keep your app's tunnel socket outside of the system VPN and avoid a circular connection.
+        tunnelSocket = createGatewaySocket();
         protect(tunnelSocket);
 
+        // Step 3: Call DatagramSocket.connect() to connect your app's tunnel socket to the VPN gateway.
 
-        // 3
-        DatagramSocket gatewaySocket = createGatewaySocket();
+        //ToDo: Connect your tunnel socket to the VPN gateway
 
-        // 4
-        buildVpnInterface();
+        // Step 4: Call VpnService.Builder methods to configure a new local TUN interface on the device for VPN traffic.
+        //ToDo: Obtain those IPs from the gateway
+        Builder builder = new Builder();
+        builder.setSession("MyVPNService")
+                .addAddress("10.0.0.2", 32)
+                .addRoute("0.0.0.0", 0);
 
+        // Step 5: Call VpnService.Builder.establish() so that the system establishes the local TUN interface and begins routing traffic through the interface.
+        vpnInterface = builder.establish();
+
+        //ToDo: Notify plugin of service status change
         return START_STICKY;
     }
 
-    // Step 3: Create a DatagramSocket and connect it to the VPN gateway
     private DatagramSocket createGatewaySocket() {
         DatagramSocket tunnel = null;
         try {
@@ -45,32 +51,32 @@ public class MyVpnService extends VpnService {
         } catch (SocketException e) {
             throw new RuntimeException(e);
         }
-        // Set up your tunnel socket here and connect it to the VPN gateway
+
         return tunnel;
     }
 
-    // Step 4: Configure the local TUN interface using VpnService.Builder methods
-    private void buildVpnInterface() {
-        Builder builder = new Builder();
-        builder.setSession("MyVPNService")
-                .addAddress("10.0.0.2", 32)
-                .addRoute("0.0.0.0", 0)
-                .setConfigureIntent(null);
-        vpnInterface = builder.establish();
-    }
-
-    // Implement other necessary methods and logic for your VPN service
-    // You'll need to handle data routing, encryption, and decryption as well
-
     @Override
-    public void onDestroy() {
-        super.onDestroy();
+    public void onRevoke() {
         if (vpnInterface != null) {
             try {
                 vpnInterface.close();
             } catch (Exception e) {
-                // Handle exception
+                //ToDo: Handle exception
+            } finally {
+                vpnInterface = null;
             }
         }
+        if (tunnelSocket != null) {
+            try {
+                tunnelSocket.close();
+            } catch (Exception ex) {
+                //ToDo: Handle exception
+            } finally {
+                tunnelSocket = null;
+            }
+        }
+
+        //ToDo: Notify plugin of service status change
+        super.onRevoke();
     }
 }

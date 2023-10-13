@@ -17,6 +17,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -75,6 +76,12 @@ public class MTLSPlugin extends Plugin {
 
             ByteArrayInputStream inputStream = new ByteArrayInputStream(privateKey.getBytes());
             byte[] encodedKey = readAllBytes(inputStream);
+
+            KeyFactory keyFactory = KeyFactory.getInstance("EC");
+
+
+
+            keyStore.setKeyEntry("huuuuuan", encodedKey, new Certificate[]{});
 
             privateKey = privateKey.replace("-----BEGIN PRIVATE KEY-----", "")
                     .replace("-----END PRIVATE KEY-----", "")
